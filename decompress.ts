@@ -35,26 +35,27 @@ const decompressProcess = async (
   destinationPath: string,
   options?: DecompressOptions,
 ): Promise<boolean> => {
-  const unzipCommandProcess = Deno.run({
-    cmd: Deno.build.os === "windows"
-      ? [
-        "PowerShell",
-        "Expand-Archive",
-        "-Path",
-        `"${zipSourcePath}"`,
-        "-DestinationPath",
-        `"${destinationPath}"`,
-        options?.overwrite ? "-Force" : "",
-      ]
-      : [
-        "unzip",
-        options?.overwrite ? "-o" : "",
-        zipSourcePath,
-        "-d",
-        destinationPath,
-      ],
-  });
-  const processStatus = (await unzipCommandProcess.status()).success;
-  Deno.close(unzipCommandProcess.rid);
-  return processStatus;
+  const runtimeOs = Deno.build.os;
+  const unzipCommandProcess = new Deno.Command(
+    runtimeOs === "windows" ? "PowerShell" : "unzip",
+    {
+      args: runtimeOs === "windows"
+        ? [
+          "PowerShell",
+          "Expand-Archive",
+          "-Path",
+          `"${zipSourcePath}"`,
+          "-DestinationPath",
+          `"${destinationPath}"`,
+          options?.overwrite ? "-Force" : "",
+        ]
+        : [
+          options?.overwrite ? "-o" : "",
+          zipSourcePath,
+          "-d",
+          destinationPath,
+        ],
+    },
+  );
+  return (await unzipCommandProcess.output()).success;
 };

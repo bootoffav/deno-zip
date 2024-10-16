@@ -13,25 +13,28 @@ const compressProcess = async (
       join(Deno.cwd(), archiveName)
     }.zip already exists, Use the {overwrite: true} option to overwrite the existing archive file`;
   }
+  const runtimeOS = Deno.build.os;
+
   const filesList = typeof files === "string"
     ? files
-    : files.join(Deno.build.os === "windows" ? ", " : " ");
-  const compressCommandProcess = Deno.run({
-    cmd: Deno.build.os === "windows"
-      ? [
-        "PowerShell",
-        "Compress-Archive",
-        "-Path",
-        filesList,
-        "-DestinationPath",
-        archiveName,
-        options?.overwrite ? "-Force" : "",
-      ]
-      : ["zip", "-r", ...options?.flags ?? [], archiveName, ...filesList.split(" ")],
-  });
-  const processStatus = (await compressCommandProcess.status()).success;
-  Deno.close(compressCommandProcess.rid);
-  return processStatus;
+    : files.join(runtimeOS === "windows" ? ", " : " ");
+
+  const compressCommandProcess = new Deno.Command(
+    runtimeOS === "windows" ? "PowerShell" : "zip",
+    {
+      args: runtimeOS === "windows"
+        ? [
+          "Compress-Archive",
+          "-Path",
+          filesList,
+          "-DestinationPath",
+          archiveName,
+          options?.overwrite ? "-Force" : "",
+        ]
+        : ["-r", ...options?.flags ?? [], archiveName, ...filesList.split(" ")],
+    },
+  );
+  return (await compressCommandProcess.output()).success;
 };
 
 export const compress = async (
